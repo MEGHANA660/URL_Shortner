@@ -1,4 +1,17 @@
 services:
   postgres:
     image: postgres:16
-    
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: urlshortener
+    ports:
+     - "5432:5432"
+    volumes:
+     - postgres_data:/var/lib/postgresql/data
+volumes:
+  postgres_data:
+    redis:
+    image: redis:7
+    ports:
+      - "6379:6379"

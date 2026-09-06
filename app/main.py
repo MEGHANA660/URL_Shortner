@@ -2,9 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from app.database import engine, Base, get_db
 from app.models import URL, Click
-from app.schemas import URLCreateRequest, URLCreateResponse
+from app.schemas import URLCreateRequest, URLCreateResponse, StatsResponse
 from app.core.shortcode import encode
 from sqlalchemy.orm import Session
+
 import redis
 import os
 
@@ -39,6 +40,20 @@ def shorten_url(request: URLCreateRequest, http_request: Request, db: Session = 
     new_url.short_code = short_code
     db.commit()
     return URLCreateResponse(short_code=short_code, long_url=new_url.long_url)
+
+@app.get("/stats/{code}", response_model=StatsResponse)
+def get_stats(code: str, db: Session = Depends(get_db)):
+    url_entry = db.query(URL).filter(URL.short_code == code).first()
+    if not url_entry:
+        raise HTTPException(status_code=404, detail="Short code not found")
+
+    total_clicks = db.query(Click).filter(Click.url_id == url_entry.id).count()
+
+    return StatsResponse(
+        short_code=url_entry.short_code,
+        long_url=url_entry.long_url,
+        total_clicks=total_clicks
+    )
 
 @app.get("/{code}")
 def redirect_to_url(code: str, db: Session = Depends(get_db)):
